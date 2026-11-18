@@ -1,0 +1,9 @@
+{
+  "namaBoard": "ESP32 DevKit V1",
+  "mac": "AA:BB:CC:DD:EE:FF",
+  "gps": {
+    "latitude": -6.200000,
+    "longitude": 106.816666
+  },
+  "temp": 27.5
+}

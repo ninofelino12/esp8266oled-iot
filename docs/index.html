@@ -1,1 +1,210 @@
-hello
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b1220">
+    <title>ESP32 Data Logger</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0b1220;
+        color: #e5edf8;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; background: #0b1220; }
+      button { font: inherit; }
+      [x-cloak] { display: none !important; }
+
+      .page { width: min(100% - 32px, 760px); margin: 0 auto; padding: 32px 0 48px; }
+      .topbar, .section-heading, .log-heading, .detail-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand-icon {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border: 1px solid #26354d;
+        border-radius: 14px;
+        background: #142137;
+        color: #7dd3fc;
+        font-size: 20px;
+      }
+      h1, h2, p { margin: 0; }
+      h1 { font-size: 18px; letter-spacing: -0.02em; }
+      .eyebrow, .muted { color: #91a1b8; }
+      .eyebrow { margin-bottom: 4px; font-size: 12px; }
+      .muted { font-size: 13px; }
+      .refresh {
+        display: inline-flex;
+        min-height: 40px;
+        align-items: center;
+        gap: 8px;
+        padding: 0 13px;
+        border: 1px solid #30415b;
+        border-radius: 12px;
+        background: #142137;
+        color: #e5edf8;
+        cursor: pointer;
+      }
+      .refresh:hover { background: #1b2b43; }
+      .refresh:disabled { cursor: wait; opacity: .65; }
+      .intro { margin: 34px 0 22px; }
+      .intro h2 { margin-bottom: 7px; font-size: clamp(24px, 6vw, 32px); letter-spacing: -0.04em; }
+      .logs { display: grid; gap: 14px; }
+      .log-card {
+        overflow: hidden;
+        border: 1px solid #26354d;
+        border-radius: 18px;
+        background: #111c2e;
+        box-shadow: 0 12px 32px #0000001c;
+      }
+      .log-heading { padding: 17px 18px; border-bottom: 1px solid #26354d; }
+      .log-heading h3 { margin: 0; font-size: 15px; font-weight: 600; }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: #86efac;
+        font-size: 12px;
+      }
+      .status::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
+      .card-body { padding: 18px; }
+      .temperature {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      .temperature strong { font-size: 48px; font-weight: 650; letter-spacing: -0.06em; line-height: 1; }
+      .temperature span { color: #91a1b8; font-size: 14px; }
+      .details { display: grid; gap: 14px; }
+      .detail-row { align-items: flex-start; font-size: 14px; }
+      .detail-label { color: #91a1b8; }
+      .detail-value { overflow-wrap: anywhere; text-align: right; }
+      .map-link { color: #7dd3fc; text-decoration: none; }
+      .map-link:hover { text-decoration: underline; }
+      .notice {
+        padding: 16px;
+        border: 1px solid #26354d;
+        border-radius: 14px;
+        background: #111c2e;
+        color: #91a1b8;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .notice.error { border-color: #7f303b; color: #fecaca; }
+      .footer { margin-top: 20px; color: #718198; font-size: 12px; text-align: center; }
+
+      @media (max-width: 480px) {
+        .page { width: min(100% - 24px, 760px); padding-top: 22px; }
+        .intro { margin-top: 28px; }
+        .log-heading, .card-body { padding-right: 15px; padding-left: 15px; }
+      }
+    </style>
+    <script>
+      function loggerDashboard() {
+        return {
+          logs: [],
+          loading: true,
+          error: "",
+          async loadLogs() {
+            this.loading = true;
+            this.error = "";
+            try {
+              const response = await fetch("./contoh-datalogger-esp32.json", { cache: "no-store" });
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const data = await response.json();
+              this.logs = Array.isArray(data)
+                ? data
+                : Array.isArray(data.logs)
+                  ? data.logs
+                  : [data];
+            } catch (error) {
+              this.error = `Data tidak dapat dimuat (${error.message}). Pastikan dashboard dijalankan melalui web server.`;
+            } finally {
+              this.loading = false;
+            }
+          },
+          coordinates(gps) {
+            if (!gps || gps.latitude == null || gps.longitude == null) return "Tidak tersedia";
+            return `${gps.latitude}, ${gps.longitude}`;
+          },
+          mapUrl(gps) {
+            return `https://maps.google.com/?q=${gps.latitude},${gps.longitude}`;
+          }
+        };
+      }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  </head>
+  <body>
+    <main class="page" x-data="loggerDashboard()" x-init="loadLogs()">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-icon" aria-hidden="true">⌁</div>
+          <div>
+            <p class="eyebrow">MONITORING PERANGKAT</p>
+            <h1>ESP32 Data Logger</h1>
+          </div>
+        </div>
+        <button class="refresh" type="button" @click="loadLogs()" :disabled="loading">
+          <span aria-hidden="true">↻</span>
+          <span x-text="loading ? 'Memuat' : 'Muat ulang'"></span>
+        </button>
+      </header>
+
+      <section class="intro">
+        <h2>Data sensor</h2>
+        <p class="muted">Data terbaru dari file log perangkat.</p>
+      </section>
+
+      <section class="logs" aria-live="polite">
+        <p class="notice" x-cloak x-show="loading">Memuat data logger...</p>
+        <p class="notice error" x-cloak x-show="!loading && error" x-text="error"></p>
+        <p class="notice" x-cloak x-show="!loading && !error && logs.length === 0">Belum ada data log.</p>
+
+        <template x-for="(log, index) in logs" :key="index">
+          <article class="log-card" x-cloak x-show="!loading && !error">
+            <div class="log-heading">
+              <h3 x-text="log.timestamp || log.waktu || log.created_at || `Rekaman ${index + 1}`"></h3>
+              <span class="status">Data tersedia</span>
+            </div>
+            <div class="card-body">
+              <div class="temperature">
+                <strong x-text="log.temp ?? '--'"></strong>
+                <span>°C · Suhu</span>
+              </div>
+              <div class="details">
+                <div class="detail-row">
+                  <span class="detail-label">Nama board</span>
+                  <span class="detail-value" x-text="log.namaBoard || 'Tidak tersedia'"></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">MAC address</span>
+                  <span class="detail-value" x-text="log.mac || 'Tidak tersedia'"></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Lokasi GPS</span>
+                  <template x-if="log.gps && log.gps.latitude != null && log.gps.longitude != null">
+                    <a class="detail-value map-link" :href="mapUrl(log.gps)" target="_blank" rel="noopener noreferrer" x-text="coordinates(log.gps)"></a>
+                  </template>
+                  <span class="detail-value" x-show="!log.gps || log.gps.latitude == null || log.gps.longitude == null">Tidak tersedia</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </template>
+      </section>
+
+      <p class="footer">Sumber data: <code>contoh-datalogger-esp32.json</code></p>
+    </main>
+  </body>
+</html>
