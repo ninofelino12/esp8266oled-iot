@@ -1,225 +1,957 @@
-<!doctype html>
-<html lang="id">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#0b1220">
-    <title>ESP32 Data Logger</title>
-    <style>
-      :root {
-        color-scheme: dark;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #0b1220;
-        color: #e5edf8;
-      }
-
-      * { box-sizing: border-box; }
-      body { margin: 0; min-width: 320px; background: #0b1220; }
-      button { font: inherit; }
-      [x-cloak] { display: none !important; }
-
-      .page { width: min(100% - 32px, 760px); margin: 0 auto; padding: 32px 0 48px; }
-      .topbar, .section-heading, .log-heading, .detail-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-      }
-      .topbar { flex-wrap: wrap; }
-      .brand { display: flex; min-width: 0; align-items: center; gap: 12px; }
-      .brand > div { min-width: 0; }
-      .brand-icon {
-        display: grid;
-        width: 42px;
-        height: 42px;
-        place-items: center;
-        border: 1px solid #26354d;
-        border-radius: 14px;
-        background: #142137;
-        color: #7dd3fc;
-        font-size: 20px;
-      }
-      h1, h2, p { margin: 0; }
-      h1 { font-size: 18px; letter-spacing: -0.02em; }
-      .eyebrow, .muted { color: #91a1b8; }
-      .eyebrow { margin-bottom: 4px; font-size: 12px; }
-      .muted { font-size: 13px; }
-      .refresh {
-        display: inline-flex;
-        min-height: 40px;
-        align-items: center;
-        gap: 8px;
-        margin-left: auto;
-        padding: 0 13px;
-        border: 1px solid #30415b;
-        border-radius: 12px;
-        background: #142137;
-        color: #e5edf8;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .refresh:hover { background: #1b2b43; }
-      .refresh:disabled { cursor: wait; opacity: .65; }
-      .intro { margin: 34px 0 22px; }
-      .intro h2 { margin-bottom: 7px; font-size: clamp(24px, 6vw, 32px); letter-spacing: -0.04em; }
-      .logs { display: grid; gap: 14px; }
-      .log-card {
-        overflow: hidden;
-        border: 1px solid #26354d;
-        border-radius: 18px;
-        background: #111c2e;
-        box-shadow: 0 12px 32px #0000001c;
-      }
-      .log-heading { padding: 17px 18px; border-bottom: 1px solid #26354d; }
-      .log-heading h3 { margin: 0; font-size: 15px; font-weight: 600; }
-      .status {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        color: #86efac;
-        font-size: 12px;
-      }
-      .status::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
-      .card-body { padding: 18px; }
-      .temperature {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-        margin-bottom: 20px;
-      }
-      .temperature strong { font-size: 48px; font-weight: 650; letter-spacing: -0.06em; line-height: 1; }
-      .temperature span { color: #91a1b8; font-size: 14px; }
-      .details { display: grid; gap: 14px; }
-      .detail-row { align-items: flex-start; font-size: 14px; }
-      .detail-label { color: #91a1b8; }
-      .detail-value { overflow-wrap: anywhere; text-align: right; }
-      .map-link { color: #7dd3fc; text-decoration: none; }
-      .map-link:hover { text-decoration: underline; }
-      .notice {
-        padding: 16px;
-        border: 1px solid #26354d;
-        border-radius: 14px;
-        background: #111c2e;
-        color: #91a1b8;
-        font-size: 14px;
-        line-height: 1.5;
-      }
-      .notice.error { border-color: #7f303b; color: #fecaca; }
-      .footer { margin-top: 20px; color: #718198; font-size: 12px; text-align: center; }
-
-      @media (max-width: 480px) {
-        .page { width: min(100% - 24px, 760px); padding-top: 22px; }
-        .intro { margin-top: 28px; }
-        .log-heading, .card-body { padding-right: 15px; padding-left: 15px; }
-        .log-heading { gap: 8px; }
-        .log-heading h3 { overflow-wrap: anywhere; }
-        .temperature strong { font-size: clamp(40px, 12vw, 48px); }
-      }
-
-      @media (max-width: 360px) {
-        .page { width: calc(100% - 20px); }
-        .brand { gap: 8px; }
-        .brand-icon { width: 38px; height: 38px; }
-        h1 { font-size: 16px; }
-        .eyebrow { font-size: 10px; }
-      }
-    </style>
+```html
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Weather Station - Alpine.js Dashboard</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      function loggerDashboard() {
-        return {
-          logs: [],
-          loading: true,
-          error: "",
-          async loadLogs() {
-            this.loading = true;
-            this.error = "";
-            try {
-              const response = await fetch("./contoh-datalogger-esp32.json", { cache: "no-store" });
-              if (!response.ok) throw new Error(`HTTP ${response.status}`);
-              const data = await response.json();
-              this.logs = Array.isArray(data)
-                ? data
-                : Array.isArray(data.logs)
-                  ? data.logs
-                  : [data];
-            } catch (error) {
-              this.error = `Data tidak dapat dimuat (${error.message}). Pastikan dashboard dijalankan melalui web server.`;
-            } finally {
-              this.loading = false;
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
             }
-          },
-          coordinates(gps) {
-            if (!gps || gps.latitude == null || gps.longitude == null) return "Tidak tersedia";
-            return `${gps.latitude}, ${gps.longitude}`;
-          },
-          mapUrl(gps) {
-            return `https://maps.google.com/?q=${gps.latitude},${gps.longitude}`;
-          }
-        };
-      }
+        }
     </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  </head>
-  <body>
-    <main class="page" x-data="loggerDashboard()" x-init="loadLogs()">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-icon" aria-hidden="true">⌁</div>
-          <div>
-            <p class="eyebrow">MONITORING PERANGKAT</p>
-            <h1>ESP32 Data Logger</h1>
-          </div>
+
+    <!-- Chart.js untuk visualisasi grafik historis -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
+    <style>
+        /* Custom scrollbar untuk tampilan yang lebih rapi */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.8);
+        }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 antialiased min-h-screen flex flex-col"
+      x-data="weatherDashboard()"
+      x-init="initDashboard()">
+
+    <!-- Notifikasi Toast (Pengganti alert) -->
+    <div x-show="toast.visible" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-2"
+         x-cloak
+         class="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border"
+         :class="toast.type === 'success' ? 'bg-emerald-900/90 border-emerald-700 text-emerald-100' : 'bg-blue-900/90 border-blue-700 text-blue-100'">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span class="text-sm font-medium" x-text="toast.message"></span>
+    </div>
+
+    <!-- Navbar / Header -->
+    <header class="sticky top-0 z-30 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand & Status ESP32 -->
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-500/20">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight flex items-center gap-2">
+                        Ramalan SI Oren
+                        <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700" x-text="espIp"></span>
+                    </h1>
+                    <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <span class="relative flex h-2 w-2">
+                            <span x-show="isConnected" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2" :class="isConnected ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                        </span>
+                        <span x-text="isConnected ? 'Terhubung (MQTT / HTTP)' : 'Terputus'"></span>
+                        <span>•</span>
+                        <span>Update: <span x-text="lastUpdated"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kontrol Header -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Tombol Simulasi / Live Mode -->
+                <button @click="toggleSimulation()" 
+                        class="px-3 py-2 rounded-xl text-xs sm:text-sm font-medium border transition-all flex items-center gap-2"
+                        :class="isSimulating 
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'">
+                    <span class="w-2 h-2 rounded-full" :class="isSimulating ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
+                    <span x-text="isSimulating ? 'Live Simulasi: ON' : 'Simulasi: OFF'"></span>
+                </button>
+
+                <!-- Tombol Konfigurasi ESP32 -->
+                <button @click="showConfigModal = true" 
+                        class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-colors"
+                        title="Pengaturan Endpoint ESP32">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+
+                <!-- Toggle Dark/Light Mode -->
+                <button @click="toggleDarkMode()" 
+                        class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-colors"
+                        title="Ubah Tema">
+                    <svg x-show="darkMode" class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    <svg x-show="!darkMode" class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
-        <button class="refresh" type="button" @click="loadLogs()" :disabled="loading">
-          <span aria-hidden="true">↻</span>
-          <span x-text="loading ? 'Memuat' : 'Muat ulang'"></span>
-        </button>
-      </header>
+    </header>
 
-      <section class="intro">
-        <h2>Data sensor</h2>
-        <p class="muted">Data terbaru dari file log perangkat.</p>
-      </section>
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        
+        <!-- Banner Status Cuaca Utama & Telemetri Hardware -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Kartu Ringkasan Cuaca -->
+            <div class="lg:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between relative overflow-hidden">
+                <!-- Dekorasi Latar -->
+                <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="absolute -bottom-10 left-10 w-36 h-36 bg-blue-400/20 rounded-full blur-xl pointer-events-none"></div>
 
-      <section class="logs" aria-live="polite">
-        <p class="notice" x-cloak x-show="loading">Memuat data logger...</p>
-        <p class="notice error" x-cloak x-show="!loading && error" x-text="error"></p>
-        <p class="notice" x-cloak x-show="!loading && !error && logs.length === 0">Belum ada data log.</p>
+                <div class="flex flex-wrap items-start justify-between gap-4 relative z-10">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <span class="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-medium">
+                                📍 <span x-text="gps.locationName"></span>
+                            </span>
+                            <a :href="`https://www.google.com/maps?q=${gps.lat},${gps.lng}`" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900/30 hover:bg-slate-900/50 backdrop-blur-sm text-xs font-mono transition-colors"
+                               title="Buka posisi ESP32 di Google Maps">
+                                <span x-text="`${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`"></span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                            </a>
+                        </div>
+                        <h2 class="text-3xl sm:text-4xl font-bold tracking-tight" x-text="weatherCondition.label"></h2>
+                        <p class="text-blue-100 text-sm mt-1" x-text="weatherCondition.description"></p>
+                    </div>
+                    <div class="text-5xl sm:text-6xl select-none" x-text="weatherCondition.icon"></div>
+                </div>
 
-        <template x-for="(log, index) in logs" :key="index">
-          <article class="log-card" x-cloak x-show="!loading && !error">
-            <div class="log-heading">
-              <h3 x-text="log.timestamp || log.waktu || log.created_at || `Rekaman ${index + 1}`"></h3>
-              <span class="status">Data tersedia</span>
+                <div class="grid grid-cols-3 gap-4 mt-8 pt-4 border-t border-white/20 relative z-10 text-sm">
+                    <div>
+                        <p class="text-blue-200 text-xs">Titik Embun (Dew Point)</p>
+                        <p class="font-semibold text-base sm:text-lg mt-0.5"><span x-text="dewPoint"></span> °C</p>
+                    </div>
+                    <div>
+                        <p class="text-blue-200 text-xs">Indeks Panas (Heat Index)</p>
+                        <p class="font-semibold text-base sm:text-lg mt-0.5"><span x-text="heatIndex"></span> °C</p>
+                    </div>
+                    <div>
+                        <p class="text-blue-200 text-xs">Ketinggian Estimasi</p>
+                        <p class="font-semibold text-base sm:text-lg mt-0.5"><span x-text="altitude"></span> mdpl</p>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-              <div class="temperature">
-                <strong x-text="log.temp ?? '--'"></strong>
-                <span>°C · Suhu</span>
-              </div>
-              <div class="details">
-                <div class="detail-row">
-                  <span class="detail-label">Nama board</span>
-                  <span class="detail-value" x-text="log.namaBoard || 'Tidak tersedia'"></span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">MAC address</span>
-                  <span class="detail-value" x-text="log.mac || 'Tidak tersedia'"></span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Lokasi GPS</span>
-                  <template x-if="log.gps && log.gps.latitude != null && log.gps.longitude != null">
-                    <a class="detail-value map-link" :href="mapUrl(log.gps)" target="_blank" rel="noopener noreferrer" x-text="coordinates(log.gps)"></a>
-                  </template>
-                  <span class="detail-value" x-show="!log.gps || log.gps.latitude == null || log.gps.longitude == null">Tidak tersedia</span>
-                </div>
-              </div>
-            </div>
-          </article>
-        </template>
-      </section>
 
-      <p class="footer">Sumber data: <code>contoh-datalogger-esp32.json</code></p>
+            <!-- Kartu Status Perangkat ESP32 -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                            </svg>
+                            Telemetri ESP32-WROOM
+                        </h3>
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            Online
+                        </span>
+                    </div>
+
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                            <span class="text-slate-500 dark:text-slate-400">MAC Address ESP32</span>
+                            <span class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 select-all" x-text="espStats.macAddress"></span>
+                        </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                            <span class="text-slate-500 dark:text-slate-400">Koordinat GPS</span>
+                            <a :href="`https://www.google.com/maps?q=${gps.lat},${gps.lng}`" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               class="font-mono text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                               title="Lacak lokasi di Google Maps">
+                                <span x-text="`${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`"></span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400" x-text="`${gps.satellites} Sat`"></span>
+                            </a>
+                        </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                            <span class="text-slate-500 dark:text-slate-400">Sinyal Wi-Fi (RSSI)</span>
+                            <span class="font-medium flex items-center gap-1.5">
+                                <span x-text="espStats.rssi + ' dBm'"></span>
+                                <span class="text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800" x-text="espStats.rssi > -65 ? 'Kuat' : 'Sedang'"></span>
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                            <span class="text-slate-500 dark:text-slate-400">Uptime Perangkat</span>
+                            <span class="font-mono font-medium" x-text="formatUptime(espStats.uptime)"></span>
+                        </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                            <span class="text-slate-500 dark:text-slate-400">Free Heap Memory</span>
+                            <span class="font-mono font-medium" x-text="espStats.freeHeap + ' KB'"></span>
+                        </div>
+                        <div class="flex justify-between items-center pt-1">
+                            <span class="text-slate-500 dark:text-slate-400">Sensor Aktif</span>
+                            <span class="text-xs font-medium text-blue-600 dark:text-blue-400">BME280, BH1750, NEO-6M GPS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+                    <button @click="fetchManualData()" class="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Refresh Sensor Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid 4 Kartu Sensor Utama -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- 1. Suhu (Temperature) -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 rounded-xl bg-rose-500/10 text-rose-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium px-2.5 py-1 rounded-full"
+                          :class="sensors.temperature > 32 ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'"
+                          x-text="sensors.temperature > 32 ? 'Panas' : 'Normal'"></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Suhu Udara</p>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <h4 class="text-3xl font-bold tracking-tight" x-text="sensors.temperature.toFixed(1)"></h4>
+                    <span class="text-slate-500 dark:text-slate-400 font-medium">°C</span>
+                </div>
+                <div class="mt-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-rose-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${Math.min(100, Math.max(0, (sensors.temperature / 50) * 100))}%`"></div>
+                </div>
+            </div>
+
+            <!-- 2. Kelembapan (Humidity) -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 rounded-xl bg-blue-500/10 text-blue-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-500"
+                          x-text="sensors.humidity > 80 ? 'Sangat Lembap' : 'Ideal'"></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Kelembapan Relatif</p>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <h4 class="text-3xl font-bold tracking-tight" x-text="sensors.humidity.toFixed(1)"></h4>
+                    <span class="text-slate-500 dark:text-slate-400 font-medium">%</span>
+                </div>
+                <div class="mt-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${sensors.humidity}%`"></div>
+                </div>
+            </div>
+
+            <!-- 3. Tekanan Udara (Pressure) -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 rounded-xl bg-purple-500/10 text-purple-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-500">Barometer</span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Tekanan Udara</p>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <h4 class="text-3xl font-bold tracking-tight" x-text="sensors.pressure.toFixed(1)"></h4>
+                    <span class="text-slate-500 dark:text-slate-400 font-medium">hPa</span>
+                </div>
+                <div class="mt-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-purple-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${Math.min(100, Math.max(0, ((sensors.pressure - 950) / 100) * 100))}%`"></div>
+                </div>
+            </div>
+
+            <!-- 4. Kecepatan Angin & Cahaya -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 rounded-xl bg-amber-500/10 text-amber-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500" x-text="sensors.windDirection"></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Kecepatan Angin</p>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <h4 class="text-3xl font-bold tracking-tight" x-text="sensors.windSpeed.toFixed(1)"></h4>
+                    <span class="text-slate-500 dark:text-slate-400 font-medium">km/j</span>
+                </div>
+                <div class="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                    <span>Intensitas Cahaya:</span>
+                    <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="sensors.lux + ' lx'"></span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bagian Grafik Real-Time & Log Data -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Grafik Historis (Chart.js) -->
+            <div class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h3 class="font-semibold text-base text-slate-800 dark:text-slate-100">Grafik Tren Suhu & Kelembapan</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Data pembacaan real-time dari sensor BME280</p>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> Suhu (°C)</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Kelembapan (%)</span>
+                    </div>
+                </div>
+                <div class="relative h-64 sm:h-72 w-full">
+                    <canvas id="weatherChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Log Data Terakhir & Ekspor CSV -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="font-semibold text-base text-slate-800 dark:text-slate-100">Log Pembacaan</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">10 catatan terakhir</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="showJsonModal = true" 
+                                class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors flex items-center gap-1.5 shadow-sm"
+                                title="Load & Lihat Contoh Data JSON">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            Load JSON
+                        </button>
+                        <button @click="exportCSV()" 
+                                class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors flex items-center gap-1.5 shadow-sm">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex-grow overflow-y-auto max-h-64 pr-1 space-y-2">
+                    <template x-for="(log, index) in logs" :key="index">
+                        <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                            <span class="font-mono text-slate-500 dark:text-slate-400" x-text="log.time"></span>
+                            <div class="flex items-center gap-3 font-medium">
+                                <span class="text-rose-500" x-text="log.temp + '°C'"></span>
+                                <span class="text-blue-500" x-text="log.hum + '%'"></span>
+                                <span class="text-purple-500 hidden sm:inline" x-text="log.press + ' hPa'"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+        </div>
+
     </main>
-  </body>
+
+    <!-- Modal Konfigurasi Endpoint ESP32 -->
+    <div x-show="showConfigModal" 
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+         x-transition.opacity>
+        <div @click.away="showConfigModal = false" 
+             class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold">Konfigurasi Koneksi ESP32</h3>
+                <button @click="showConfigModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Masukkan alamat IP lokal ESP32 Anda (misal: <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">http://192.168.1.105/api/weather</code>) yang mengembalikan format JSON.
+            </p>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Endpoint URL / IP ESP32</label>
+                    <input type="text" x-model="espEndpoint" 
+                           class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Interval Polling (Detik)</label>
+                    <input type="number" x-model.number="pollInterval" min="1" max="60"
+                           class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div class="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                <p class="text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Contoh Respon JSON ESP32:</p>
+                <pre class="text-[10px] font-mono text-slate-500 dark:text-slate-400 overflow-x-auto">{"mac": "24:6F:28:A1:B4:C8", "lat": -6.59714, "lng": 106.80603, "temperature": 28.4, "humidity": 76.2, "pressure": 1011.5, "windSpeed": 12.0, "lux": 4500}</pre>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button @click="showConfigModal = false" class="px-4 py-2 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    Batal
+                </button>
+                <button @click="saveConfig()" class="px-4 py-2 rounded-xl text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors">
+                    Simpan & Terapkan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Contoh Data Log JSON & Loader -->
+    <div x-show="showJsonModal" 
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+         x-transition.opacity>
+        <div @click.away="showJsonModal = false" 
+             class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold">Contoh Data Log JSON ESP32</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Pilih preset atau edit JSON di bawah untuk dimuat langsung ke grafik & dashboard</p>
+                </div>
+                <button @click="showJsonModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Preset Pilihan Skenario -->
+            <div class="flex flex-wrap gap-2">
+                <button @click="selectJsonPreset('cerah')" 
+                        class="px-3 py-1.5 rounded-xl text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors">
+                    ☀️ Preset 1: Cuaca Cerah (Siang)
+                </button>
+                <button @click="selectJsonPreset('hujan')" 
+                        class="px-3 py-1.5 rounded-xl text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-colors">
+                    🌧️ Preset 2: Hujan & Mendung
+                </button>
+            </div>
+
+            <!-- Editor JSON -->
+            <div>
+                <textarea x-model="jsonInputText" rows="11" 
+                          class="w-full p-3 rounded-xl bg-slate-950 text-emerald-400 font-mono text-xs border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"></textarea>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">*Memuat JSON akan menjeda mode simulasi otomatis</span>
+                <div class="flex gap-2">
+                    <button @click="showJsonModal = false" class="px-4 py-2 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        Tutup
+                    </button>
+                    <button @click="loadJsonToDashboard()" class="px-4 py-2 rounded-xl text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm">
+                        Load Data ke Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Logika Alpine.js -->
+    <script>
+        let weatherChartInstance = null;
+
+        const SAMPLE_JSON_LOGS = {
+            cerah: [
+                { "timestamp": "09:00:00", "mac": "24:6F:28:A1:B4:C8", "lat": -6.59714, "lng": 106.80603, "satellites": 9, "locationName": "Bogor Tengah, Jawa Barat", "temperature": 26.8, "humidity": 76.0, "pressure": 1013.2, "windSpeed": 8.4, "windDirection": "Timur", "lux": 5200, "rssi": -56, "freeHeap": 216 },
+                { "timestamp": "09:15:00", "mac": "24:6F:28:A1:B4:C8", "lat": -6.59715, "lng": 106.80605, "satellites": 10, "locationName": "Bogor Tengah, Jawa Barat", "temperature": 27.5, "humidity": 73.5, "pressure": 1013.0, "windSpeed": 9.1, "windDirection": "Timur", "lux": 6800, "rssi": -55, "freeHeap": 215 },
+                { "timestamp": "09:30:00", "mac": "24:6F:28:A1:B4:C8", "lat": -6.59714, "lng": 106.80604, "satellites": 10, "locationName": "Bogor Tengah, Jawa Barat", "temperature": 28.4, "humidity": 70.2, "pressure": 1012.8, "windSpeed": 10.5, "windDirection": "Timur Laut", "lux": 7900, "rssi": -57, "freeHeap": 215 },
+                { "timestamp": "09:45:00", "mac": "24:6F:28:A1:B4:C8", "lat": -6.59716, "lng": 106.80602, "satellites": 11, "locationName": "Bogor Tengah, Jawa Barat", "temperature": 29.6, "humidity": 66.8, "pressure": 1012.5, "windSpeed": 11.8, "windDirection": "Timur Laut", "lux": 8850, "rssi": -54, "freeHeap": 214 },
+                { "timestamp": "10:00:00", "mac": "24:6F:28:A1:B4:C8", "lat": -6.59714, "lng": 106.80603, "satellites": 10, "locationName": "Bogor Tengah, Jawa Barat", "temperature": 30.8, "humidity": 63.0, "pressure": 1012.1, "windSpeed": 12.4, "windDirection": "Utara", "lux": 9600, "rssi": -55, "freeHeap": 214 },
+                { "timestamp": "10:15:00", "mac": "24:6F:28:A1:B4:C8", "lat": -6.59715, "lng": 106.80603, "satellites": 10, "locationName": "Bogor Tengah, Jawa Barat", "temperature": 31.4, "humidity": 60.5, "pressure": 1011.8, "windSpeed": 13.0, "windDirection": "Utara", "lux": 10400, "rssi": -56, "freeHeap": 213 }
+            ],
+            hujan: [
+                { "timestamp": "14:00:00", "mac": "3C:71:BF:9E:12:40", "lat": -6.65241, "lng": 106.91285, "satellites": 7, "locationName": "Cisarua Puncak, Jawa Barat", "temperature": 28.2, "humidity": 78.0, "pressure": 1009.5, "windSpeed": 14.2, "windDirection": "Barat Daya", "lux": 3200, "rssi": -61, "freeHeap": 212 },
+                { "timestamp": "14:15:00", "mac": "3C:71:BF:9E:12:40", "lat": -6.65243, "lng": 106.91288, "satellites": 6, "locationName": "Cisarua Puncak, Jawa Barat", "temperature": 26.9, "humidity": 82.4, "pressure": 1008.7, "windSpeed": 18.6, "windDirection": "Barat Daya", "lux": 1850, "rssi": -63, "freeHeap": 211 },
+                { "timestamp": "14:30:00", "mac": "3C:71:BF:9E:12:40", "lat": -6.65240, "lng": 106.91284, "satellites": 6, "locationName": "Cisarua Puncak, Jawa Barat", "temperature": 25.4, "humidity": 87.1, "pressure": 1007.9, "windSpeed": 22.4, "windDirection": "Barat", "lux": 920, "rssi": -64, "freeHeap": 210 },
+                { "timestamp": "14:45:00", "mac": "3C:71:BF:9E:12:40", "lat": -6.65242, "lng": 106.91286, "satellites": 5, "locationName": "Cisarua Puncak, Jawa Barat", "temperature": 24.3, "humidity": 91.5, "pressure": 1007.2, "windSpeed": 25.1, "windDirection": "Barat", "lux": 480, "rssi": -65, "freeHeap": 210 },
+                { "timestamp": "15:00:00", "mac": "3C:71:BF:9E:12:40", "lat": -6.65241, "lng": 106.91285, "satellites": 6, "locationName": "Cisarua Puncak, Jawa Barat", "temperature": 23.8, "humidity": 93.8, "pressure": 1006.8, "windSpeed": 21.0, "windDirection": "Barat Laut", "lux": 350, "rssi": -62, "freeHeap": 209 },
+                { "timestamp": "15:15:00", "mac": "3C:71:BF:9E:12:40", "lat": -6.65241, "lng": 106.91285, "satellites": 7, "locationName": "Cisarua Puncak, Jawa Barat", "temperature": 23.5, "humidity": 94.2, "pressure": 1006.5, "windSpeed": 19.3, "windDirection": "Barat Laut", "lux": 410, "rssi": -60, "freeHeap": 209 }
+            ]
+        };
+
+        function weatherDashboard() {
+            return {
+                darkMode: true,
+                isConnected: true,
+                isSimulating: true,
+                showConfigModal: false,
+                showJsonModal: false,
+                jsonInputText: JSON.stringify(SAMPLE_JSON_LOGS.cerah, null, 2),
+                espIp: '192.168.1.105',
+                espEndpoint: 'http://192.168.1.105/api/weather',
+                pollInterval: 3,
+                timer: null,
+                lastUpdated: '--:--:--',
+
+                toast: {
+                    visible: false,
+                    message: '',
+                    type: 'info'
+                },
+
+                // Data Sensor Utama
+                sensors: {
+                    temperature: 27.5,
+                    humidity: 74.0,
+                    pressure: 1012.4,
+                    windSpeed: 11.2,
+                    windDirection: 'Barat Daya',
+                    lux: 6420
+                },
+
+                // Telemetri Perangkat ESP32
+                espStats: {
+                    macAddress: '24:6F:28:A1:B4:C8',
+                    rssi: -58,
+                    uptime: 14285, // dalam detik
+                    freeHeap: 214
+                },
+
+                // Posisi GPS Perangkat ESP32 (Modul NEO-6M)
+                gps: {
+                    lat: -6.59714,
+                    lng: 106.80603,
+                    satellites: 9,
+                    locationName: 'Bogor Tengah, Jawa Barat'
+                },
+
+                // Riwayat Log
+                logs: [],
+
+                // Computed: Kondisi Cuaca Dinamis
+                get weatherCondition() {
+                    if (this.sensors.humidity > 85 && this.sensors.pressure < 1008) {
+                        return { label: 'Hujan / Mendung Tebal', description: 'Kelembapan tinggi dan tekanan udara rendah terdeteksi.', icon: '🌧️' };
+                    } else if (this.sensors.lux > 8000 && this.sensors.temperature > 30) {
+                        return { label: 'Cerah Terik', description: 'Intensitas cahaya matahari tinggi, suhu udara hangat.', icon: '☀️' };
+                    } else if (this.sensors.lux > 2000) {
+                        return { label: 'Cerah Berawan', description: 'Cuaca cukup bersahabat dengan angin sepoi-sepoi.', icon: '⛅' };
+                    } else {
+                        return { label: 'Teduh / Malam Hari', description: 'Intensitas cahaya rendah, kondisi udara stabil.', icon: '🌙' };
+                    }
+                },
+
+                // Computed: Titik Embun (Magnus formula sederhana)
+                get dewPoint() {
+                    const a = 17.27;
+                    const b = 237.7;
+                    const alpha = ((a * this.sensors.temperature) / (b + this.sensors.temperature)) + Math.log(this.sensors.humidity / 100.0);
+                    const dp = (b * alpha) / (a - alpha);
+                    return dp.toFixed(1);
+                },
+
+                // Computed: Heat Index (Feels Like)
+                get heatIndex() {
+                    const t = this.sensors.temperature;
+                    const rh = this.sensors.humidity;
+                    if (t < 27) return t.toFixed(1);
+                    const hi = -8.78469475556 + 1.61139411 * t + 2.33854883889 * rh - 0.14611605 * t * rh - 0.012308094 * (t * t) - 0.0164248277778 * (rh * rh) + 0.002211732 * (t * t) * rh + 0.00072546 * t * (rh * rh) - 0.000003582 * (t * t) * (rh * rh);
+                    return hi.toFixed(1);
+                },
+
+                // Computed: Estimasi Ketinggian dari Tekanan Udara (Barometric formula)
+                get altitude() {
+                    const alt = 44330 * (1 - Math.pow(this.sensors.pressure / 1013.25, 0.1903));
+                    return Math.round(alt);
+                },
+
+                initDashboard() {
+                    try {
+                        this.initChart();
+                        // Isi data awal
+                        for (let i = 0; i < 6; i++) {
+                            this.generateSimulatedData(true);
+                        }
+                        this.startPolling();
+                    } catch (error) {
+                        console.error('Initialization error:', error);
+                    }
+                },
+
+                showToast(msg, type = 'info') {
+                    this.toast.message = msg;
+                    this.toast.type = type;
+                    this.toast.visible = true;
+                    setTimeout(() => {
+                        this.toast.visible = false;
+                    }, 3000);
+                },
+
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                    if (this.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                    this.updateChartTheme();
+                },
+
+                toggleSimulation() {
+                    this.isSimulating = !this.isSimulating;
+                    if (this.isSimulating) {
+                        this.showToast('Mode Simulasi ESP32 diaktifkan', 'success');
+                        this.startPolling();
+                    } else {
+                        this.showToast('Mencoba mengambil data langsung dari ' + this.espEndpoint, 'info');
+                        this.fetchRealEspData();
+                    }
+                },
+
+                startPolling() {
+                    if (this.timer) clearInterval(this.timer);
+                    this.timer = setInterval(() => {
+                        if (this.isSimulating) {
+                            this.generateSimulatedData();
+                        } else {
+                            this.fetchRealEspData();
+                        }
+                    }, this.pollInterval * 1000);
+                },
+
+                fetchManualData() {
+                    if (this.isSimulating) {
+                        this.generateSimulatedData();
+                        this.showToast('Data simulasi diperbarui', 'success');
+                    } else {
+                        this.fetchRealEspData();
+                    }
+                },
+
+                async fetchRealEspData() {
+                    try {
+                        const response = await fetch(this.espEndpoint);
+                        if (!response.ok) throw new Error('HTTP Error');
+                        const data = await response.json();
+                        
+                        this.sensors.temperature = parseFloat(data.temperature ?? this.sensors.temperature);
+                        this.sensors.humidity = parseFloat(data.humidity ?? this.sensors.humidity);
+                        this.sensors.pressure = parseFloat(data.pressure ?? this.sensors.pressure);
+                        this.sensors.windSpeed = parseFloat(data.windSpeed ?? this.sensors.windSpeed);
+                        this.sensors.lux = parseInt(data.lux ?? this.sensors.lux);
+                        if (data.mac) this.espStats.macAddress = data.mac;
+                        if (data.lat !== undefined) this.gps.lat = parseFloat(data.lat);
+                        if (data.lng !== undefined) this.gps.lng = parseFloat(data.lng);
+                        if (data.satellites !== undefined) this.gps.satellites = parseInt(data.satellites);
+                        if (data.locationName) this.gps.locationName = data.locationName;
+                        
+                        this.isConnected = true;
+                        this.recordDataPoint();
+                    } catch (err) {
+                        this.isConnected = false;
+                        this.showToast('Gagal terhubung ke ESP32. Periksa IP/CORS.', 'info');
+                    }
+                },
+
+                generateSimulatedData(silent = false) {
+                    // Variasi halus untuk simulasi realistis
+                    const deltaTemp = (Math.random() - 0.48) * 0.4;
+                    const deltaHum = (Math.random() - 0.5) * 1.2;
+                    const deltaPress = (Math.random() - 0.5) * 0.3;
+                    const deltaWind = (Math.random() - 0.48) * 1.5;
+
+                    this.sensors.temperature = Math.max(18, Math.min(40, this.sensors.temperature + deltaTemp));
+                    this.sensors.humidity = Math.max(40, Math.min(98, this.sensors.humidity + deltaHum));
+                    this.sensors.pressure = Math.max(995, Math.min(1025, this.sensors.pressure + deltaPress));
+                    this.sensors.windSpeed = Math.max(0, Math.min(45, this.sensors.windSpeed + deltaWind));
+                    this.sensors.lux = Math.max(100, Math.round(this.sensors.lux + (Math.random() - 0.5) * 300));
+
+                    const directions = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
+                    if (Math.random() > 0.8) {
+                        this.sensors.windDirection = directions[Math.floor(Math.random() * directions.length)];
+                    }
+
+                    // Update statistik ESP32 & GPS drift halus
+                    this.espStats.uptime += this.pollInterval;
+                    this.espStats.rssi = -55 - Math.floor(Math.random() * 12);
+                    this.espStats.freeHeap = 210 + Math.floor(Math.random() * 8);
+                    this.gps.lat += (Math.random() - 0.5) * 0.00004;
+                    this.gps.lng += (Math.random() - 0.5) * 0.00004;
+                    this.gps.satellites = 8 + Math.floor(Math.random() * 4);
+                    this.isConnected = true;
+
+                    this.recordDataPoint();
+                },
+
+                recordDataPoint() {
+                    const now = new Date();
+                    const timeStr = now.toTimeString().split(' ')[0];
+                    this.lastUpdated = timeStr;
+
+                    // Tambah ke log tabel
+                    this.logs.unshift({
+                        time: timeStr,
+                        temp: this.sensors.temperature.toFixed(1),
+                        hum: this.sensors.humidity.toFixed(1),
+                        press: this.sensors.pressure.toFixed(1),
+                        wind: this.sensors.windSpeed.toFixed(1)
+                    });
+                    if (this.logs.length > 10) this.logs.pop();
+
+                    // Update Grafik Chart.js
+                    if (weatherChartInstance) {
+                        weatherChartInstance.data.labels.push(timeStr);
+                        weatherChartInstance.data.datasets[0].data.push(this.sensors.temperature.toFixed(1));
+                        weatherChartInstance.data.datasets[1].data.push(this.sensors.humidity.toFixed(1));
+
+                        if (weatherChartInstance.data.labels.length > 15) {
+                            weatherChartInstance.data.labels.shift();
+                            weatherChartInstance.data.datasets[0].data.shift();
+                            weatherChartInstance.data.datasets[1].data.shift();
+                        }
+                        weatherChartInstance.update('none');
+                    }
+                },
+
+                saveConfig() {
+                    try {
+                        const url = new URL(this.espEndpoint);
+                        this.espIp = url.hostname;
+                    } catch (e) {
+                        this.espIp = this.espEndpoint;
+                    }
+                    this.showConfigModal = false;
+                    this.startPolling();
+                    this.showToast('Konfigurasi ESP32 disimpan', 'success');
+                },
+
+                selectJsonPreset(type) {
+                    this.jsonInputText = JSON.stringify(SAMPLE_JSON_LOGS[type], null, 2);
+                },
+
+                loadJsonToDashboard() {
+                    try {
+                        const parsed = JSON.parse(this.jsonInputText);
+                        const dataset = Array.isArray(parsed) ? parsed : [parsed];
+                        if (dataset.length === 0) throw new Error('Data JSON kosong');
+
+                        // Matikan simulasi otomatis agar data JSON yang dimuat tetap terlihat jelas
+                        this.isSimulating = false;
+                        if (this.timer) clearInterval(this.timer);
+
+                        // Reset log & grafik
+                        this.logs = [];
+                        if (weatherChartInstance) {
+                            weatherChartInstance.data.labels = [];
+                            weatherChartInstance.data.datasets[0].data = [];
+                            weatherChartInstance.data.datasets[1].data = [];
+                        }
+
+                        // Masukkan setiap item JSON ke log dan grafik
+                        dataset.forEach((item, idx) => {
+                            const timeLabel = item.timestamp || new Date().toTimeString().split(' ')[0];
+                            const temp = parseFloat(item.temperature ?? 27.0);
+                            const hum = parseFloat(item.humidity ?? 75.0);
+                            const press = parseFloat(item.pressure ?? 1012.0);
+                            const wind = parseFloat(item.windSpeed ?? 10.0);
+
+                            this.logs.unshift({
+                                time: timeLabel,
+                                temp: temp.toFixed(1),
+                                hum: hum.toFixed(1),
+                                press: press.toFixed(1),
+                                wind: wind.toFixed(1)
+                            });
+
+                            if (weatherChartInstance) {
+                                weatherChartInstance.data.labels.push(timeLabel);
+                                weatherChartInstance.data.datasets[0].data.push(temp.toFixed(1));
+                                weatherChartInstance.data.datasets[1].data.push(hum.toFixed(1));
+                            }
+
+                            // Perbarui kartu sensor utama dengan data terakhir
+                            if (idx === dataset.length - 1) {
+                                this.sensors.temperature = temp;
+                                this.sensors.humidity = hum;
+                                this.sensors.pressure = press;
+                                this.sensors.windSpeed = wind;
+                                if (item.windDirection) this.sensors.windDirection = item.windDirection;
+                                if (item.lux !== undefined) this.sensors.lux = parseInt(item.lux);
+                                if (item.mac) this.espStats.macAddress = item.mac;
+                                if (item.lat !== undefined) this.gps.lat = parseFloat(item.lat);
+                                if (item.lng !== undefined) this.gps.lng = parseFloat(item.lng);
+                                if (item.satellites !== undefined) this.gps.satellites = parseInt(item.satellites);
+                                if (item.locationName) this.gps.locationName = item.locationName;
+                                if (item.rssi !== undefined) this.espStats.rssi = parseInt(item.rssi);
+                                if (item.freeHeap !== undefined) this.espStats.freeHeap = parseInt(item.freeHeap);
+                                this.lastUpdated = timeLabel;
+                            }
+                        });
+
+                        if (this.logs.length > 10) this.logs = this.logs.slice(0, 10);
+                        if (weatherChartInstance) weatherChartInstance.update();
+
+                        this.isConnected = true;
+                        this.showJsonModal = false;
+                        this.showToast(`${dataset.length} log JSON berhasil dimuat ke dashboard`, 'success');
+                    } catch (err) {
+                        this.showToast('Format JSON tidak valid: ' + err.message, 'info');
+                    }
+                },
+
+                formatUptime(seconds) {
+                    const h = Math.floor(seconds / 3600);
+                    const m = Math.floor((seconds % 3600) / 60);
+                    const s = seconds % 60;
+                    return `${h}j ${m}m ${s}d`;
+                },
+
+                exportCSV() {
+                    let csvContent = "data:text/csv;charset=utf-8,Waktu,Suhu (C),Kelembapan (%),Tekanan (hPa),Angin (km/j)\n";
+                    this.logs.forEach(row => {
+                        csvContent += `${row.time},${row.temp},${row.hum},${row.press},${row.wind}\n`;
+                    });
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", `esp32_weather_${new Date().toISOString().slice(0,10)}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    this.showToast('Log cuaca berhasil diunduh (CSV)', 'success');
+                },
+
+                initChart() {
+                    const canvas = document.getElementById('weatherChart');
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    const gridColor = this.darkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+                    const textColor = this.darkMode ? '#94a3b8' : '#64748b';
+
+                    weatherChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                {
+                                    label: 'Suhu (°C)',
+                                    data: [],
+                                    borderColor: '#f43f5e',
+                                    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                                    borderWidth: 2.5,
+                                    tension: 0.4,
+                                    fill: true,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    label: 'Kelembapan (%)',
+                                    data: [],
+                                    borderColor: '#3b82f6',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    borderWidth: 2.5,
+                                    tension: 0.4,
+                                    fill: true,
+                                    yAxisID: 'y1'
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: gridColor },
+                                    ticks: { color: textColor, font: { size: 11 } }
+                                },
+                                y: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                    grid: { color: gridColor },
+                                    ticks: { color: '#f43f5e', font: { size: 11 } },
+                                    suggestedMin: 15,
+                                    suggestedMax: 40
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'right',
+                                    grid: { drawOnChartArea: false },
+                                    ticks: { color: '#3b82f6', font: { size: 11 } },
+                                    suggestedMin: 30,
+                                    suggestedMax: 100
+                                }
+                            }
+                        }
+                    });
+                },
+
+                updateChartTheme() {
+                    if (!weatherChartInstance) return;
+                    const gridColor = this.darkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+                    const textColor = this.darkMode ? '#94a3b8' : '#64748b';
+                    weatherChartInstance.options.scales.x.grid.color = gridColor;
+                    weatherChartInstance.options.scales.x.ticks.color = textColor;
+                    weatherChartInstance.options.scales.y.grid.color = gridColor;
+                    weatherChartInstance.update();
+                }
+            }
+        }
+    </script>
+</body>
 </html>
+```
