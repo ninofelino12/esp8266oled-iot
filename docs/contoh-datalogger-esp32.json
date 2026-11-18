@@ -1,9 +1,102 @@
-{
-  "namaBoard": "ESP32 DevKit V1",
-  "mac": "AA:BB:CC:DD:EE:FF",
-  "gps": {
-    "latitude": -6.200000,
-    "longitude": 106.816666
+[
+  {
+    "timestamp": "2026-11-18T03:00:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:FF",
+    "gps": {
+      "latitude": -6.200000,
+      "longitude": 106.816666
+    },
+    "temp": 27.5
   },
-  "temp": 27.5
-}
+  {
+    "timestamp": "2026-11-18T03:01:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:01",
+    "gps": {
+      "latitude": -6.201120,
+      "longitude": 106.817240
+    },
+    "temp": 27.7
+  },
+  {
+    "timestamp": "2026-11-18T03:02:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:02",
+    "gps": {
+      "latitude": -6.202350,
+      "longitude": 106.815890
+    },
+    "temp": 27.8
+  },
+  {
+    "timestamp": "2026-11-18T03:03:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:03",
+    "gps": {
+      "latitude": -6.199540,
+      "longitude": 106.814720
+    },
+    "temp": 28.0
+  },
+  {
+    "timestamp": "2026-11-18T03:04:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:04",
+    "gps": {
+      "latitude": -6.198760,
+      "longitude": 106.818130
+    },
+    "temp": 28.1
+  },
+  {
+    "timestamp": "2026-11-18T03:05:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:05",
+    "gps": {
+      "latitude": -6.203010,
+      "longitude": 106.819450
+    },
+    "temp": 28.3
+  },
+  {
+    "timestamp": "2026-11-18T03:06:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:06",
+    "gps": {
+      "latitude": -6.204280,
+      "longitude": 106.816320
+    },
+    "temp": 28.4
+  },
+  {
+    "timestamp": "2026-11-18T03:07:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:07",
+    "gps": {
+      "latitude": -6.201870,
+      "longitude": 106.812960
+    },
+    "temp": 28.2
+  },
+  {
+    "timestamp": "2026-11-18T03:08:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:08",
+    "gps": {
+      "latitude": -6.198920,
+      "longitude": 106.811840
+    },
+    "temp": 28.0
+  },
+  {
+    "timestamp": "2026-11-18T03:09:00Z",
+    "namaBoard": "ESP32 DevKit V1",
+    "mac": "AA:BB:CC:DD:EE:09",
+    "gps": {
+      "latitude": -6.197650,
+      "longitude": 106.815280
+    },
+    "temp": 27.9
+  }
+]
